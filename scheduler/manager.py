@@ -1,0 +1,171 @@
+"""
+Scheduler Manager：使用 APScheduler 管理定時任務。
+任務資料持久化存在 SQLite，重啟後自動恢復。
+"""
+import uuid
+from datetime import datetime
+from typing import Optional
+from dataclasses import dataclass, asdict
+
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
+from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
+from apscheduler.triggers.date import DateTrigger
+
+from config import SCHEDULER_DB_PATH, TIMEZONE
+
+
+@dataclass
+class TaskInfo:
+    id: str
+    name: str
+    task_prompt: str
+    output_format: str
+    save_path: Optional[str]
+    schedule_type: str      # cron | interval | once
+    schedule_expr: str      # cron 表達式 | "30m" | "2026-03-20 15:00"
+    next_run: Optional[str]
+    last_run: Optional[str]
+    enabled: bool
+
+
+# 全局 Scheduler 單例
+_scheduler: Optional[AsyncIOScheduler] = None
+# 任務元資料（存在記憶體，重啟後由 APScheduler 恢復觸發器）
+_task_meta: dict[str, TaskInfo] = {}
+
+
+def get_scheduler() -> AsyncIOScheduler:
+    global _scheduler
+    if _scheduler is None:
+        jobstore = SQLAlchemyJobStore(url=f"sqlite:///{SCHEDULER_DB_PATH}")
+        _scheduler = AsyncIOScheduler(
+            jobstores={"default": jobstore},
+            timezone=TIMEZONE,
+        )
+    return _scheduler
+
+
+async def _execute_task(task_id: str, task_prompt: str, output_format: str, save_path: Optional[str]):
+    """實際執行任務的函式"""
+    try:
+        from agent.graph import run_task
+        result = await run_task(task_prompt, output_format, save_path)
+        if task_id in _task_meta:
+            _task_meta[task_id].last_run = datetime.now().isoformat()
+        return result
+    except Exception as e:
+        print(f"[Scheduler] 任務 {task_id} 執行失敗：{e}")
+
+
+def _parse_interval(expr: str) -> dict:
+    """解析間隔表達式，如 '30m', '2h', '1d'"""
+    units = {"s": "seconds", "m": "minutes", "h": "hours", "d": "days", "w": "weeks"}
+    unit = expr[-1].lower()
+    value = int(expr[:-1])
+    return {units.get(unit, "minutes"): value}
+
+
+def add_task(
+    name: str,
+    task_prompt: str,
+    output_format: str = "md",
+    save_path: Optional[str] = None,
+    schedule_type: str = "cron",
+    schedule_expr: str = "0 9 * * *",
+) -> TaskInfo:
+    """
+    新增定時任務。
+
+    Args:
+        name: 任務名稱
+        task_prompt: 任務描述（傳給 LangGraph agent）
+        output_format: 輸出格式
+        save_path: 儲存路徑（None = 不存檔）
+        schedule_type: cron | interval | once
+        schedule_expr: cron 表達式 / 間隔（如 '1h'）/ 時間字串
+
+    Returns:
+        TaskInfo
+    """
+    task_id = str(uuid.uuid4())[:8]
+    scheduler = get_scheduler()
+
+    if schedule_type == "cron":
+        trigger = CronTrigger.from_crontab(schedule_expr, timezone=TIMEZONE)
+    elif schedule_type == "interval":
+        trigger = IntervalTrigger(**_parse_interval(schedule_expr), timezone=TIMEZONE)
+    elif schedule_type == "once":
+        run_time = datetime.fromisoformat(schedule_expr)
+        trigger = DateTrigger(run_date=run_time, timezone=TIMEZONE)
+    else:
+        raise ValueError(f"不支援的排程類型：{schedule_type}")
+
+    scheduler.add_job(
+        _execute_task,
+        trigger=trigger,
+        args=[task_id, task_prompt, output_format, save_path],
+        id=task_id,
+        name=name,
+        replace_existing=True,
+    )
+
+    job = scheduler.get_job(task_id)
+    next_run = job.next_run_time.isoformat() if job and job.next_run_time else None
+
+    info = TaskInfo(
+        id=task_id,
+        name=name,
+        task_prompt=task_prompt,
+        output_format=output_format,
+        save_path=save_path,
+        schedule_type=schedule_type,
+        schedule_expr=schedule_expr,
+        next_run=next_run,
+        last_run=None,
+        enabled=True,
+    )
+    _task_meta[task_id] = info
+    return info
+
+
+def remove_task(task_id: str) -> bool:
+    """刪除任務"""
+    scheduler = get_scheduler()
+    try:
+        scheduler.remove_job(task_id)
+        _task_meta.pop(task_id, None)
+        return True
+    except Exception:
+        return False
+
+
+def list_tasks() -> list[dict]:
+    """列出所有任務"""
+    scheduler = get_scheduler()
+    result = []
+    for job in scheduler.get_jobs():
+        meta = _task_meta.get(job.id, TaskInfo(
+            id=job.id, name=job.name, task_prompt="",
+            output_format="md", save_path=None,
+            schedule_type="cron", schedule_expr="",
+            next_run=None, last_run=None, enabled=True,
+        ))
+        meta.next_run = job.next_run_time.isoformat() if job.next_run_time else None
+        result.append(asdict(meta))
+    return result
+
+
+async def start():
+    """啟動 Scheduler"""
+    sched = get_scheduler()
+    if not sched.running:
+        sched.start()
+
+
+async def shutdown():
+    """關閉 Scheduler"""
+    sched = get_scheduler()
+    if sched.running:
+        sched.shutdown(wait=False)

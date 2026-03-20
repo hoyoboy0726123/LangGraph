@@ -1,0 +1,37 @@
+name: YouTube
+domains:
+  - youtube\.com
+  - youtu\.be
+
+actions:
+  like:
+    - type: click
+      selector: "button[aria-label*='like this video'], button[aria-label*='Like this video']"
+      wait_ms: 500
+
+  subscribe:
+    - type: click
+      selector: "#subscribe-button button, ytd-subscribe-button-renderer button"
+      wait_ms: 1000
+
+  unsubscribe:
+    - type: click
+      selector: "#subscribe-button button[aria-label*='Subscribed']"
+      wait_ms: 500
+    - type: click
+      selector: "yt-confirm-dialog-renderer button:has-text('Unsubscribe')"
+
+  reply:
+    - type: click
+      selector: "#placeholder-area"
+      wait_ms: 500
+    - type: fill
+      selector: "#contenteditable-root"
+      text: "{{text}}"
+    - type: click
+      selector: "#submit-button"
+      wait_ms: 1000
+
+  bookmark:
+    - type: click
+      selector: "button[aria-label*='Save']"

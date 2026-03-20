@@ -1,0 +1,30 @@
+name: Instagram
+domains:
+  - instagram\.com
+
+actions:
+  like:
+    - type: click
+      selector: "svg[aria-label='讚'], svg[aria-label='Like']"
+      wait_ms: 500
+
+  reply:
+    - type: click
+      selector: "svg[aria-label='留言'], svg[aria-label='Comment']"
+      wait_ms: 800
+    - type: fill
+      selector: "textarea[placeholder]"
+      text: "{{text}}"
+    - type: press
+      key: Enter
+
+  follow:
+    - type: click
+      selector: "button:has-text('追蹤'), button:has-text('Follow')"
+
+  unfollow:
+    - type: click
+      selector: "button:has-text('追蹤中'), button:has-text('Following')"
+      wait_ms: 500
+    - type: click
+      selector: "button:has-text('取消追蹤'), button:has-text('Unfollow')"

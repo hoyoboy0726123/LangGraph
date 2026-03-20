@@ -1,0 +1,51 @@
+name: Twitter / X
+domains:
+  - twitter\.com
+  - x\.com
+
+actions:
+  like:
+    - type: click
+      selector: "[data-testid='like']"
+      wait_ms: 500
+
+  unlike:
+    - type: click
+      selector: "[data-testid='unlike']"
+
+  reply:
+    - type: click
+      selector: "[data-testid='reply']"
+      wait_ms: 800
+    - type: fill
+      selector: "[data-testid='tweetTextarea_0']"
+      text: "{{text}}"
+    - type: click
+      selector: "[data-testid='tweetButton']"
+      wait_ms: 1000
+
+  repost:
+    - type: click
+      selector: "[data-testid='retweet']"
+      wait_ms: 500
+    - type: click
+      selector: "[data-testid='retweetConfirm']"
+
+  bookmark:
+    - type: click
+      selector: "[data-testid='bookmark']"
+
+  follow:
+    - type: click
+      selector: "[data-testid='placementTracking'] [role='button']"
+
+  post:
+    - type: click
+      selector: "[data-testid='tweetTextarea_0']"
+      wait_ms: 500
+    - type: fill
+      selector: "[data-testid='tweetTextarea_0']"
+      text: "{{text}}"
+    - type: click
+      selector: "[data-testid='tweetButton']"
+      wait_ms: 1500

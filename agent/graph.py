@@ -148,9 +148,20 @@ def get_graph():
     """回傳已編譯的圖（懶載入）"""
     global _compiled_graph
     if _compiled_graph is None:
-        from tools.scraper import scrape_page
-        from tools.search import search_web
+        # ── 主要工具（OpenCLI：複用 Chrome session）───────────
+        from tools.opencli import run_opencli, opencli_list, opencli_explore, opencli_status
+
+        # ── 補充工具（OpenCLI 沒有 adapter 時的後備）─────────
+        from tools.scraper import scrape_page          # 純 HTTP 爬蟲 + Groq 萃取
+        from tools.search import search_web            # DuckDuckGo 搜尋
+
+        # ── 檔案工具 ──────────────────────────────────────────
         from tools.file_manager import save_to_file, read_from_file
+
+        # ── 媒體下載 ──────────────────────────────────────────
+        from tools.media import download_media
+
+        # ── 瀏覽器客製操作（CDP，需 Chrome 開啟除錯 port）────
         from tools.browser_actions import (
             navigate_to, click_element, type_text,
             take_screenshot, scroll_page, fill_form,
@@ -159,16 +170,21 @@ def get_graph():
             like_post, reply_to_post, create_post,
             follow_user, unfollow_user, repost, bookmark_post,
         )
-        from tools.media import download_media
 
         all_tools = [
+            # OpenCLI（優先）
+            run_opencli, opencli_list, opencli_explore, opencli_status,
+            # 搜尋 / 爬蟲（後備）
             scrape_page, search_web,
+            # 檔案
             save_to_file, read_from_file,
+            # 媒體
+            download_media,
+            # 瀏覽器客製操作（CDP）
             navigate_to, click_element, type_text,
             take_screenshot, scroll_page, fill_form,
             like_post, reply_to_post, create_post,
             follow_user, unfollow_user, repost, bookmark_post,
-            download_media,
         ]
         _compiled_graph = build_graph(all_tools)
     return _compiled_graph

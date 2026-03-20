@@ -44,10 +44,15 @@ _SYSTEM = """你是一個強大的 AI Agent，專門負責網頁爬蟲、資料�
   save_to_file(content, filename)  - 儲存到本地
   read_from_file(filepath)         - 讀取本地檔案
 
-## 決策邏輯
-- 涉及已知社群網站 → 先用 opencli_list 確認，再用 run_opencli
-- 公開頁面不需登入 → scrape_page 或 search_web
-- 需要複雜互動 → CDP 瀏覽器工具
+## 決策邏輯（必須按此順序）
+1. 永遠先嘗試 opencli_list，確認哪些網站有 adapter
+2. 有 adapter → 使用 run_opencli（不論是否為公開頁面）
+3. 沒有 adapter 且是公開靜態頁面 → 才用 scrape_page 或 search_web
+4. 需要點擊/填表單等互動 → CDP 瀏覽器工具
+
+【禁止事項】
+- 禁止對 Twitter、Bilibili、知乎、小紅書、Reddit 等社群網站使用 scrape_page
+  （這些網站有反爬蟲，HTTP 爬蟲幾乎無效，必須用 OpenCLI）
 
 分析任務後，以 JSON 格式回覆執行計劃：
 {

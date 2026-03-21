@@ -1,0 +1,50 @@
+# Pipeline YAML 範例
+# 存到 ~/pipelines/ 目錄下，透過 Telegram /pipeline run 執行
+#
+# 用法：
+#   /pipeline run /home/user/pipelines/daily_data.yaml
+#   /pipeline schedule /home/user/pipelines/daily_data.yaml "0 8 * * *"
+
+pipeline:
+  name: 每日資料處理範例
+
+  steps:
+    # 步驟 1：下載原始資料
+    - name: 資料下載
+      batch: python /home/user/scripts/fetch_data.py
+      timeout: 300          # 最多等 5 分鐘
+      retry: 2              # 失敗自動重試 2 次，第 3 次失敗才問用戶
+      output:
+        path: /home/user/data/raw_data.csv
+        expect: "CSV 檔案，至少 100 列，包含 date 和 price 欄位"
+
+    # 步驟 2：資料清理
+    - name: 資料清理
+      batch: python /home/user/scripts/clean_data.py
+      timeout: 120
+      retry: 1
+      output:
+        path: /home/user/data/clean_data.csv
+        expect: "CSV 檔案，大小不為空，欄位格式正確"
+
+    # 步驟 3：分析並產生報告
+    - name: 分析報告
+      batch: python /home/user/scripts/analyze.py
+      timeout: 600
+      retry: 1
+      output:
+        path: /home/user/data/report.xlsx
+        expect: "Excel 檔案，大小大於 10KB，含有 summary 工作表"
+
+    # 步驟 4：上傳結果（無輸出檔案檢查）
+    - name: 上傳 S3
+      batch: aws s3 cp /home/user/data/report.xlsx s3://my-bucket/reports/
+      timeout: 60
+      retry: 2
+      # output 欄位可省略，LLM 只看 exit code 和 stderr 判斷
+
+    # 步驟 5：發送通知（最多 5 步）
+    - name: 發送 Email
+      batch: python /home/user/scripts/send_email.py
+      timeout: 30
+      retry: 1

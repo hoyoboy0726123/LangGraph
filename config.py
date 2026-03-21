@@ -38,6 +38,11 @@ for extra in os.getenv("EXTRA_ALLOWED_PATHS", "").split(","):
 TIMEZONE = os.getenv("TIMEZONE", "Asia/Taipei")
 SCHEDULER_DB_PATH = OUTPUT_BASE_PATH / "scheduler.db"
 
+# ── Pipeline ─────────────────────────────────────────────────
+# 存放 pipeline YAML 定義檔的預設目錄
+PIPELINE_DIR = Path(os.getenv("PIPELINE_DIR", "~/pipelines")).expanduser()
+PIPELINE_DIR.mkdir(parents=True, exist_ok=True)
+
 # ── OpenCLI 可用命令清單（opencli list 輸出，供 AI 直接參考）────
 OPENCLI_COMMANDS = """
 ## OpenCLI 支援的網站與命令（244 個內建命令，44 個網站）

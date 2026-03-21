@@ -59,6 +59,19 @@ async def _execute_task(task_id: str, task_prompt: str, output_format: str, save
         print(f"[Scheduler] 任務 {task_id} 執行失敗：{e}")
 
 
+async def _execute_pipeline_task(task_id: str, yaml_path: str, chat_id: int):
+    """執行 pipeline YAML 的排程入口"""
+    try:
+        from pipeline.models import PipelineConfig
+        from pipeline.runner import run_pipeline
+        config = PipelineConfig.from_yaml(yaml_path)
+        await run_pipeline(config_dict=config.model_dump(), chat_id=chat_id)
+        if task_id in _task_meta:
+            _task_meta[task_id].last_run = datetime.now().isoformat()
+    except Exception as e:
+        print(f"[Scheduler] Pipeline 任務 {task_id} 執行失敗：{e}")
+
+
 def _parse_interval(expr: str) -> dict:
     """解析間隔表達式，如 '30m', '2h', '1d'"""
     units = {"s": "seconds", "m": "minutes", "h": "hours", "d": "days", "w": "weeks"}
@@ -155,6 +168,56 @@ def list_tasks() -> list[dict]:
         meta.next_run = job.next_run_time.isoformat() if job.next_run_time else None
         result.append(asdict(meta))
     return result
+
+
+def add_pipeline_task(
+    name: str,
+    yaml_path: str,
+    chat_id: int,
+    schedule_expr: str = "0 8 * * *",
+) -> TaskInfo:
+    """
+    新增 pipeline YAML 定時執行任務。
+
+    Args:
+        name:          顯示名稱
+        yaml_path:     pipeline YAML 完整路徑
+        chat_id:       Telegram chat id（通知用）
+        schedule_expr: cron 表達式（預設每天 08:00）
+
+    Returns:
+        TaskInfo
+    """
+    task_id = str(uuid.uuid4())[:8]
+    scheduler = get_scheduler()
+    trigger = CronTrigger.from_crontab(schedule_expr, timezone=TIMEZONE)
+
+    scheduler.add_job(
+        _execute_pipeline_task,
+        trigger=trigger,
+        args=[task_id, yaml_path, chat_id],
+        id=task_id,
+        name=name,
+        replace_existing=True,
+    )
+
+    job = scheduler.get_job(task_id)
+    next_run = job.next_run_time.isoformat() if job and job.next_run_time else None
+
+    info = TaskInfo(
+        id=task_id,
+        name=name,
+        task_prompt=f"[pipeline] {yaml_path}",
+        output_format="pipeline",
+        save_path=None,
+        schedule_type="cron",
+        schedule_expr=schedule_expr,
+        next_run=next_run,
+        last_run=None,
+        enabled=True,
+    )
+    _task_meta[task_id] = info
+    return info
 
 
 async def start():

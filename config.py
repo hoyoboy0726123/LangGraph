@@ -6,7 +6,7 @@ load_dotenv()
 
 # ── Groq ────────────────────────────────────────────────────
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-GROQ_MODEL_MAIN = "llama-3.3-70b-versatile"          # 主推理模型
+GROQ_MODEL_MAIN = "llama-3.1-8b-instant"              # 主推理模型（TPD 500k）
 GROQ_MODEL_FAST = "llama3-groq-8b-8192-tool-use-preview"  # 快速工具選擇
 
 # ── Telegram ────────────────────────────────────────────────

@@ -7,23 +7,26 @@ from langchain_groq import ChatGroq
 from langchain_core.messages import SystemMessage, HumanMessage
 
 from agent.state import AgentState
-from config import GROQ_API_KEY, GROQ_MODEL_MAIN
+from config import GROQ_API_KEY, GROQ_MODEL_MAIN, OPENCLI_COMMANDS
 
 _llm = ChatGroq(api_key=GROQ_API_KEY, model=GROQ_MODEL_MAIN, temperature=0)
 
-_SYSTEM = """你是一個強大的 AI Agent，專門負責網頁爬蟲、資料擷取和瀏覽器自動化。
+_SYSTEM = f"""你是一個強大的 AI Agent，專門負責網頁爬蟲、資料擷取和瀏覽器自動化。
+
+## OpenCLI 可用命令（已預載，無需呼叫 opencli_list）
+
+{OPENCLI_COMMANDS}
 
 ## 工具優先順序
 
-【第一優先：OpenCLI】複用使用者已登入的 Chrome session，支援 40+ 網站
-  opencli_list()                           - 先執行這個，確認哪些網站/命令可用
-  run_opencli("twitter timeline -f json")  - 執行 opencli 命令爬取或操作網站
-  opencli_explore(url)                     - 探索網站 API（無 adapter 時用）
+【第一優先：OpenCLI】複用使用者已登入的 Chrome session，直接從上方清單選擇命令
+  run_opencli("site command [options]")    - 執行 opencli 命令爬取或操作網站
+  opencli_explore(url)                     - 探索尚未支援的網站 API
   opencli_status()                         - 診斷 Browser Bridge 連線
 
   常見用法範例：
     run_opencli("twitter timeline --format json --limit 20")
-    run_opencli("bilibili trending --format table")
+    run_opencli("bilibili hot --format table")
     run_opencli("zhihu hot --format md")
 
 【第二優先：HTTP 爬蟲】用於公開頁面，不需登入

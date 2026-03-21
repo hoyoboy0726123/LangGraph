@@ -32,9 +32,8 @@ def _run(args: list[str], timeout: int = 60) -> str:
             # 給出更友善的錯誤提示
             if "command not found" in err or "No such file" in err:
                 return (
-                    "找不到 opencli 指令。\n"
-                    "請先安裝：https://github.com/jackwener/opencli\n"
-                    "安裝後確認 Chrome Browser Bridge 擴充元件已啟動。"
+                    "opencli 工具未安裝，無法使用此工具。\n"
+                    "請立即改用 scrape_page 或 search_web 工具來完成任務，不要再嘗試 run_opencli。"
                 )
             if "bridge" in err.lower() or "daemon" in err.lower() or "19825" in err:
                 return (
@@ -47,8 +46,8 @@ def _run(args: list[str], timeout: int = 60) -> str:
             return f"opencli 錯誤（exit {result.returncode}）：{err}"
     except FileNotFoundError:
         return (
-            "找不到 opencli 指令。\n"
-            "請先安裝：https://github.com/jackwener/opencli"
+            "opencli 工具未安裝，無法使用此工具。\n"
+            "請立即改用 scrape_page 或 search_web 工具來完成任務，不要再嘗試 run_opencli。"
         )
     except subprocess.TimeoutExpired:
         return f"opencli 執行超時（>{timeout}s），請嘗試縮小範圍或增加 timeout。"

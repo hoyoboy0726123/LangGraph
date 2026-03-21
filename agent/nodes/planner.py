@@ -58,12 +58,12 @@ _SYSTEM = f"""你是一個強大的 AI Agent，專門負責網頁爬蟲、資料
   （這些網站有反爬蟲，HTTP 爬蟲幾乎無效，必須用 OpenCLI）
 
 分析任務後，以 JSON 格式回覆執行計劃：
-{
+{{
   "plan": ["步驟1說明", "步驟2說明", ...],
   "output_format": "table|json|yaml|md|csv",
   "needs_browser": true|false,
   "save_path": "reports/filename.md 或 null"
-}
+}}
 
 只回覆 JSON，不要加其他說明。"""
 
